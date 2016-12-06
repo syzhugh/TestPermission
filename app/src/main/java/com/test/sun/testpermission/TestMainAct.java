@@ -26,22 +26,20 @@ public class TestMainAct extends AppCompatActivity {
     protected void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
-        /*需要申请的权限集合*/
-
+        /*需要申请的(权限，别名)集合*/
         HashMap<String, String> permissionMap = new HashMap<>();
         permissionMap.put(Manifest.permission.CAMERA, "相机");
         permissionMap.put(Manifest.permission.READ_CONTACTS, "通讯录");
         permissionMap.put(Manifest.permission.READ_EXTERNAL_STORAGE, "存储空间");
 
-
         /**
-         * 创建辅助类
+         *  注册辅助类
          *  设置dialog内容，设置回调接口
+         *  处理不能正常绑定的异常，直接推迟，结束当前页面
          * */
         try {
             requestObject = PermissionUtil.with(this)
                     .checkPermission(permissionMap)
-                    .setHelpContent("帮助", "为了正常显示内容，请点击“去开启”在应用设置中打开“权限”，开启以下权限：\n")
                     .addCallBack(new PermissionUtil.PermissionCallback() {
                         @Override
                         public void failToGetPermission() {
@@ -53,9 +51,9 @@ public class TestMainAct extends AppCompatActivity {
                         public void allNeededPermissionGranted() {
                             /*需要的权限全部获取，进行相关，初始操作需要从resume开始*/
                         }
-                    });
+                    }).setHelpContent("帮助", "为了正常显示内容，请点击“去开启”在应用设置中打开“权限”，开启以下权限：\n");
         } catch (Exception e) {
-
+            Log.i("info", ":" + e.getMessage());
         }
     }
 

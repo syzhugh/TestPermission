@@ -12,6 +12,13 @@ import android.util.Log;
 
 /**
  * Created by ZS27 on 2016/12/3.
+ * <p>
+ * 测试发现dialog消失后，act会触发onresume，所以申请权限不能卸载onresume中，会造成dialog无限弹出叠加
+ * <p>
+ * oncreate 注册工具类
+ * onstart  onrestart中申请权限
+ * <p>
+ * 核心操作，推迟到onresume，或者根据PermissionUtil.PermissionObject.allGranted返回值进行判断操作
  */
 
 public class TestCycle extends AppCompatActivity {

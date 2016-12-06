@@ -22,6 +22,19 @@ import java.io.IOException;
 
 import static android.R.attr.permission;
 
+/* 2016/12/6 12:02
+*
+*   
+*
+*   用于测试android 6.0动态权限操作
+*
+*   权限检查checkSelfPermission
+*   检查回执onRequestPermissionsResult
+*   判断不再弹框shouldShowRequestPermissionRationale
+*
+* */
+
+
 public class MainActivity extends AppCompatActivity implements SurfaceHolder.Callback {
 
     private SurfaceView surfaceView;
