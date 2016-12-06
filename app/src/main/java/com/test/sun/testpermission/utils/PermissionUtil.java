@@ -14,8 +14,12 @@ import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
 
+import java.util.Collection;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.Map;
+import java.util.Set;
 
 /**
  * Created by ZS27 on 2016/12/3.
@@ -36,7 +40,9 @@ public class PermissionUtil {
     }
 
     public interface PermissionCallback {
-        void PermissionResult(boolean allGranted);
+        void failToGetPermission();
+
+        void allNeededPermissionGranted();
     }
 
     public static class PermissionObj {
@@ -61,30 +67,40 @@ public class PermissionUtil {
          * 用于单个权限的申请
          *
          * @param permission 单个权限的名称 {@link android.Manifest.permission}
+         * @param name       权限的别名，方便提示{如：Manifest.permission.CAMERA-->提示相机}
+         * @return RequestObject 操作工具类
          */
-        public RequestObject checkPermission(String permission) {
+        public RequestObject checkPermission(String permission, String name) {
             Activity tempAct = getActivity();
-            HashSet<String> set = new HashSet<>();
+            HashMap<String, String> map = new HashMap<>();
             if (ContextCompat.checkSelfPermission(tempAct.getApplicationContext(), permission) == PackageManager.PERMISSION_DENIED) {
-                set.add(permission);
+                map.put(permission, name);
             }
-            return new RequestObject(tempAct, set);
+            return new RequestObject(tempAct, map);
         }
 
         /**
-         * 用于单个权限的申请
+         * 用于多个权限的申请
          *
-         * @param set 多个权限的的String Set集合 {@link android.Manifest.permission}
+         * @param map 多个权限的的String Map集合
+         *            strint1{@link android.Manifest.permission}
+         *            strint2{权限的别名，方便提示，如：Manifest.permission.CAMERA-->提示相机}
+         * @return RequestObject 操作工具类
+         * @throws Exception 获取对应的activity(context)失败,捕获异常进行退出
          */
-        public RequestObject checkPermission(HashSet<String> set) {
+        public RequestObject checkPermission(HashMap<String, String> map) throws Exception {
             Activity tempAct = getActivity();
+            if (tempAct == null)
+                throw new Exception("not found context");
+
+            Set<String> set = map.keySet();
             Iterator<String> iterator = set.iterator();
             if (iterator.hasNext()) {
                 String temp = iterator.next();
                 if (ContextCompat.checkSelfPermission(tempAct.getApplicationContext(), temp) == PackageManager.PERMISSION_GRANTED)
-                    set.remove(temp);
+                    map.remove(temp);
             }
-            return new RequestObject(tempAct, set);
+            return new RequestObject(tempAct, map);
         }
 
         private Activity getActivity() {
@@ -102,15 +118,15 @@ public class PermissionUtil {
 
         public static class RequestObject {
             private Activity activity;
-            private HashSet<String> set;
+            private HashMap<String, String> map;
             private PermissionCallback callback;
 
             private String title;
             private String content;
 
-            public RequestObject(Activity activity, HashSet<String> set) {
+            public RequestObject(Activity activity, HashMap<String, String> map) {
                 this.activity = activity;
-                this.set = set;
+                this.map = map;
             }
 
             /**
@@ -128,7 +144,7 @@ public class PermissionUtil {
              *
              * @return 用于级联调用
              */
-            public RequestObject helpContent(String title, String content) {
+            public RequestObject setHelpContent(String title, String content) {
                 this.title = title;
                 this.content = content;
                 return this;
@@ -140,9 +156,8 @@ public class PermissionUtil {
              * @param requestCode
              */
             public void requsetPermission(int requestCode) {
+                Set<String> set = map.keySet();
                 String[] stringArr = new String[set.size()];
-                Log.i("info", "RequestObject:requsetPermission----------------------");
-                Log.i("info", ":" + stringArr.length);
                 set.toArray(stringArr);
                 ActivityCompat.requestPermissions(activity, stringArr, requestCode);
             }
@@ -167,25 +182,27 @@ public class PermissionUtil {
              * @param grantResults 权限的设置结果，int数组
              */
             public void onResultOperation(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
-                HashSet<String> setTemp = new HashSet<>();
+
+                HashMap<String, String> map = new HashMap<>();
                 for (int i = 0; i < permissions.length; i++) {
                     if (grantResults[i] == PackageManager.PERMISSION_DENIED) {
-                        setTemp.add(permissions[i]);
+                        map.put(permissions[i], this.map.get(permissions[i]));
                     }
                 }
-                if (setTemp.size() > 0) {
-                    showDialog();
-//                    boolean needToSet = showRequestPermissionRationale();
-//                    if (needToSet) {
-//                        showDialog();
-//                    }
+                if (map.size() > 0) {
+                    showDialog(map);
                 } else {
-                    callback.PermissionResult(true);
+                    callback.allNeededPermissionGranted();
                 }
             }
 
+            /*  实际开发中发现可以不用，留着备用开发
+            *   ActivityCompat.shouldShowRequestPermissionRationale
+            *
+            * */
+
             public boolean showRequestPermissionRationale() {
-                Iterator<String> iterator = set.iterator();
+                Iterator<String> iterator = map.keySet().iterator();
                 while (iterator.hasNext()) {
                     if (!ActivityCompat.shouldShowRequestPermissionRationale(activity, iterator.next())) {
                         return true;
@@ -194,26 +211,49 @@ public class PermissionUtil {
                 return false;
             }
 
+            /**
+             * 授权检查方法，配合实际使用，实时检查授权情况
+             *
+             * @return false未获取全部权限，true获取全部权限
+             */
+
+
+            public boolean isAllGranted() {
+                Set<String> set = map.keySet();
+                Iterator<String> iterator = set.iterator();
+                if (iterator.hasNext()) {
+                    String temp = iterator.next();
+                    if (ContextCompat.checkSelfPermission(activity.getApplicationContext(), temp) == PackageManager.PERMISSION_DENIED)
+                        return false;
+                }
+                return true;
+            }
+
+
             /*
             * 弹出自己的提示框
             * */
-            private void showDialog() {
+            private void showDialog(HashMap<String, String> map) {
+                StringBuilder builder = new StringBuilder();
+                Iterator<String> iterator = map.values().iterator();
+                while (iterator.hasNext()) {
+                    builder.append("\n·" + iterator.next());
+                }
                 new AlertDialog.Builder(activity)
                         .setTitle(title != null ? title : "帮助")
-                        .setMessage(content != null ? content : "帮助信息")
+                        .setMessage((content != null ? content : "帮助信息") + builder.toString())
                         .setPositiveButton("去开启", new DialogInterface.OnClickListener() {
                             @Override
                             public void onClick(DialogInterface dialogInterface, int i) {
                                 Intent intent = new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS);
                                 intent.setData(Uri.parse("package:" + activity.getPackageName()));
-                                Log.i("info", ":" + intent.getDataString());
                                 activity.startActivity(intent);
                             }
                         })
                         .setNegativeButton("取消", new DialogInterface.OnClickListener() {
                             @Override
                             public void onClick(DialogInterface dialogInterface, int i) {
-                                callback.PermissionResult(false);
+                                callback.failToGetPermission();
                             }
                         }).show();
             }
