@@ -76,7 +76,13 @@ public class PermissionUtil {
             if (ContextCompat.checkSelfPermission(tempAct.getApplicationContext(), permission) == PackageManager.PERMISSION_DENIED) {
                 map.put(permission, name);
             }
-            return new RequestObject(tempAct, map);
+            if (activity != null) {
+                return new RequestObjectAct(tempAct, map);
+            }
+            if (fragmentV4 != null) {
+                return new RequestObjectFragmentv4(fragmentV4, map);
+            }
+            return null;
         }
 
         /**
@@ -100,7 +106,13 @@ public class PermissionUtil {
                 if (ContextCompat.checkSelfPermission(tempAct.getApplicationContext(), temp) == PackageManager.PERMISSION_GRANTED)
                     map.remove(temp);
             }
-            return new RequestObject(tempAct, map);
+            if (activity != null) {
+                return new RequestObjectAct(tempAct, map);
+            }
+            if (fragmentV4 != null) {
+                return new RequestObjectFragmentv4(fragmentV4, map);
+            }
+            return null;
         }
 
         private Activity getActivity() {
@@ -110,57 +122,26 @@ public class PermissionUtil {
             if (fragmentV4 != null) {
                 return fragmentV4.getActivity();
             }
-            if (fragment != null) {
-                return fragment.getActivity();
-            }
             return null;
         }
 
-        public static class RequestObject {
-            private Activity activity;
-            private HashMap<String, String> map;
-            private PermissionCallback callback;
+        public interface RequestObject {
 
-            private String title;
-            private String content;
-
-            public RequestObject(Activity activity, HashMap<String, String> map) {
-                this.activity = activity;
-                this.map = map;
-            }
-
-            /**
-             * 用于添加权限检查结果的回调接口
-             *
-             * @return 用于级联调用
-             */
-            public RequestObject addCallBack(PermissionCallback callback) {
-                this.callback = callback;
-                return this;
-            }
+            RequestObject addCallBack(PermissionCallback callback);
 
             /**
              * 用于添加提示信息
              *
              * @return 用于级联调用
              */
-            public RequestObject setHelpContent(String title, String content) {
-                this.title = title;
-                this.content = content;
-                return this;
-            }
+            RequestObject setHelpContent(String title, String content);
 
             /**
              * 在需要处进行调用，传入自定义的请求参数(标示)
              *
              * @param requestCode
              */
-            public void requsetPermission(int requestCode) {
-                Set<String> set = map.keySet();
-                String[] stringArr = new String[set.size()];
-                set.toArray(stringArr);
-                ActivityCompat.requestPermissions(activity, stringArr, requestCode);
-            }
+            void requsetPermission(int requestCode);
 
             /**
              * 在需要处进行调用，传入自定义的请求参数(标示)
@@ -168,11 +149,7 @@ public class PermissionUtil {
              * @param requestCode
              * @param set         内部使用，用于处理检查过后依然没有给予权限的权限
              */
-            private void requsetPermission(int requestCode, HashSet<String> set) {
-                String[] stringArr = new String[set.size()];
-                set.toArray(stringArr);
-                ActivityCompat.requestPermissions(activity, stringArr, requestCode);
-            }
+            void requsetPermission(int requestCode, HashSet<String> set);
 
             /**
              * 在activity中的onRequestPermissionsResult中进行调用，拿到方法参数进行调用
@@ -181,6 +158,61 @@ public class PermissionUtil {
              * @param permissions  申请的权限，String数组
              * @param grantResults 权限的设置结果，int数组
              */
+
+            void onResultOperation(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults);
+
+            /**
+             * 授权检查方法，配合实际使用，实时检查授权情况
+             *
+             * @return false未获取全部权限，true获取全部权限
+             */
+
+            boolean isAllGranted();
+
+            /*
+            * 弹出自己的提示框
+            * */
+            void showDialog(HashMap<String, String> map);
+        }
+
+
+        public static class RequestObjectFragmentv4 implements RequestObject {
+            private Fragment fragment;
+            private HashMap<String, String> map;
+            private PermissionCallback callback;
+
+            private String title;
+            private String content;
+
+            public RequestObjectFragmentv4(Fragment fragment, HashMap<String, String> map) {
+                this.fragment = fragment;
+                this.map = map;
+            }
+
+            public RequestObject addCallBack(PermissionCallback callback) {
+                this.callback = callback;
+                return this;
+            }
+
+            public RequestObject setHelpContent(String title, String content) {
+                this.title = title;
+                this.content = content;
+                return this;
+            }
+
+            public void requsetPermission(int requestCode) {
+                Set<String> set = map.keySet();
+                String[] stringArr = new String[set.size()];
+                set.toArray(stringArr);
+                this.fragment.requestPermissions(stringArr, requestCode);
+            }
+
+            public void requsetPermission(int requestCode, HashSet<String> set) {
+                String[] stringArr = new String[set.size()];
+                set.toArray(stringArr);
+                this.fragment.requestPermissions(stringArr, requestCode);
+            }
+
             public void onResultOperation(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
 
                 HashMap<String, String> map = new HashMap<>();
@@ -196,10 +228,95 @@ public class PermissionUtil {
                 }
             }
 
-            /*  实际开发中发现可以不用，留着备用开发
-            *   ActivityCompat.shouldShowRequestPermissionRationale
-            *
-            * */
+            public boolean isAllGranted() {
+                Set<String> set = map.keySet();
+                Iterator<String> iterator = set.iterator();
+                if (iterator.hasNext()) {
+                    String temp = iterator.next();
+                    if (ContextCompat.checkSelfPermission(fragment.getActivity(), temp) == PackageManager.PERMISSION_DENIED)
+                        return false;
+                }
+                return true;
+            }
+
+            public void showDialog(HashMap<String, String> map) {
+                StringBuilder builder = new StringBuilder();
+                Iterator<String> iterator = map.values().iterator();
+                while (iterator.hasNext()) {
+                    builder.append("\n·" + iterator.next());
+                }
+                new AlertDialog.Builder(fragment.getActivity())
+                        .setTitle(title != null ? title : "帮助")
+                        .setMessage((content != null ? content : "帮助信息") + builder.toString())
+                        .setPositiveButton("去开启", new DialogInterface.OnClickListener() {
+                            @Override
+                            public void onClick(DialogInterface dialogInterface, int i) {
+                                Intent intent = new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS);
+                                intent.setData(Uri.parse("package:" + fragment.getActivity().getPackageName()));
+                                fragment.getActivity().startActivity(intent);
+                            }
+                        })
+                        .setNegativeButton("取消", new DialogInterface.OnClickListener() {
+                            @Override
+                            public void onClick(DialogInterface dialogInterface, int i) {
+                                callback.failToGetPermission();
+                            }
+                        }).show();
+            }
+
+        }
+
+        public static class RequestObjectAct implements RequestObject {
+            private Activity activity;
+            private HashMap<String, String> map;
+            private PermissionCallback callback;
+
+            private String title;
+            private String content;
+
+            public RequestObjectAct(Activity activity, HashMap<String, String> map) {
+                this.activity = activity;
+                this.map = map;
+            }
+
+            public RequestObjectAct addCallBack(PermissionCallback callback) {
+                this.callback = callback;
+                return this;
+            }
+
+            public RequestObjectAct setHelpContent(String title, String content) {
+                this.title = title;
+                this.content = content;
+                return this;
+            }
+
+            public void requsetPermission(int requestCode) {
+                Set<String> set = map.keySet();
+                String[] stringArr = new String[set.size()];
+                set.toArray(stringArr);
+                ActivityCompat.requestPermissions(activity, stringArr, requestCode);
+            }
+
+            public void requsetPermission(int requestCode, HashSet<String> set) {
+                String[] stringArr = new String[set.size()];
+                set.toArray(stringArr);
+                ActivityCompat.requestPermissions(activity, stringArr, requestCode);
+            }
+
+            public void onResultOperation(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
+
+                HashMap<String, String> map = new HashMap<>();
+                for (int i = 0; i < permissions.length; i++) {
+                    if (grantResults[i] == PackageManager.PERMISSION_DENIED) {
+                        map.put(permissions[i], this.map.get(permissions[i]));
+                    }
+                }
+                if (map.size() > 0) {
+                    showDialog(map);
+                } else {
+                    callback.allNeededPermissionGranted();
+                }
+            }
 
             public boolean showRequestPermissionRationale() {
                 Iterator<String> iterator = map.keySet().iterator();
@@ -210,13 +327,6 @@ public class PermissionUtil {
                 }
                 return false;
             }
-
-            /**
-             * 授权检查方法，配合实际使用，实时检查授权情况
-             *
-             * @return false未获取全部权限，true获取全部权限
-             */
-
 
             public boolean isAllGranted() {
                 Set<String> set = map.keySet();
@@ -229,11 +339,7 @@ public class PermissionUtil {
                 return true;
             }
 
-
-            /*
-            * 弹出自己的提示框
-            * */
-            private void showDialog(HashMap<String, String> map) {
+            public void showDialog(HashMap<String, String> map) {
                 StringBuilder builder = new StringBuilder();
                 Iterator<String> iterator = map.values().iterator();
                 while (iterator.hasNext()) {
@@ -259,8 +365,5 @@ public class PermissionUtil {
             }
 
         }
-
     }
-
-
 }

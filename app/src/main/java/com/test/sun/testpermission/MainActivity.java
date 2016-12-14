@@ -54,7 +54,7 @@ public class MainActivity extends AppCompatActivity implements SurfaceHolder.Cal
             getPermission = true;
         }
 
-        surfaceView = (SurfaceView) findViewById(R.id.main_surface);
+//        surfaceView = (SurfaceView) findViewById(R.id.main_surface);
 
     }
 
