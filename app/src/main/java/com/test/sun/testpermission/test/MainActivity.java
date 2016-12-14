@@ -1,7 +1,6 @@
-package com.test.sun.testpermission;
+package com.test.sun.testpermission.test;
 
 import android.Manifest;
-import android.app.Activity;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.pm.PackageManager;
@@ -18,9 +17,9 @@ import android.util.Log;
 import android.view.SurfaceHolder;
 import android.view.SurfaceView;
 
-import java.io.IOException;
+import com.test.sun.testpermission.R;
 
-import static android.R.attr.permission;
+import java.io.IOException;
 
 /* 2016/12/6 12:02
 *

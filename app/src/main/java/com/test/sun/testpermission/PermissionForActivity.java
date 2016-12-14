@@ -4,32 +4,29 @@ import android.Manifest;
 import android.os.Bundle;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
-import android.support.v4.app.Fragment;
+import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
-import android.view.LayoutInflater;
-import android.view.View;
-import android.view.ViewGroup;
 
-import com.test.sun.testpermission.R;
 import com.test.sun.testpermission.utils.PermissionUtil;
 
 import java.util.HashMap;
 
-/**
- * Created by ZS27 on 2016/12/14.
+/*
+ * Created by ZS27 on 2016/12/3.
+ *
+ *
+ * activity的用法
  */
 
-public class MFragment extends Fragment {
+public class PermissionForActivity extends AppCompatActivity {
 
-    /*辅助类*/
+    /*定义请求常量 工具类*/
+    public static final int REQUESTCODE = 0x100;
     private PermissionUtil.PermissionObj.RequestObject requestObject;
 
-    @Nullable
     @Override
-    public View onCreateView(LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
-        Log.i("info", "MFragment:onCreateView----------------------");
-        View inflate = inflater.inflate(R.layout.fragment_temp, container, false);
-
+    protected void onCreate(@Nullable Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
 
         /*需要申请的(权限，别名)集合*/
         HashMap<String, String> permissionMap = new HashMap<>();
@@ -38,45 +35,57 @@ public class MFragment extends Fragment {
         permissionMap.put(Manifest.permission.READ_EXTERNAL_STORAGE, "存储空间");
 
         /**
-         *  注册辅助类   field
+         *  注册辅助类
          *  设置dialog内容，设置回调接口
          *  处理不能正常绑定的异常，直接推迟，结束当前页面
          * */
         try {
-            /*需要的权限未全部获取，进行退出操作*//*需要的权限全部获取，进行相关，初始操作需要从resume开始*/
             requestObject = PermissionUtil.with(this)
                     .checkPermission(permissionMap)
                     .addCallBack(new PermissionUtil.PermissionCallback() {
                         @Override
                         public void failToGetPermission() {
-                                /*需要的权限未全部获取，进行退出操作*/
-                            getActivity().finish();
+                            /*需要的权限未全部获取，进行退出操作*/
+                            PermissionForActivity.this.finish();
                         }
 
                         @Override
                         public void allNeededPermissionGranted() {
-                                /*需要的权限全部获取，进行相关，初始操作需要从resume开始*/
+                            /*需要的权限全部获取，进行相关，初始操作需要从resume开始*/
                         }
                     }).setHelpContent("帮助", "为了正常显示内容，请点击“去开启”在应用设置中打开“权限”，开启以下权限：\n");
         } catch (Exception e) {
-            Log.i("info", "Exception:Exception----------------------");
-            e.printStackTrace();
+            Log.i("info", ":" + e.getMessage());
         }
 
-        return inflate;
     }
 
+    /**
+     * 用于从 setting返回时，重新检查权限
+     */
     @Override
-    public void onStart() {
-        super.onStart();
-        /*因为要弹出窗口，在start调用*/
-        requestObject.requsetPermission(0);
+    protected void onRestart() {
+        super.onRestart();
+        requestObject.requsetPermission(REQUESTCODE);
     }
 
+    /**
+     * 用于从act开启的权限检查，不能写在onResume与Dialog冲突
+     */
+    @Override
+    protected void onStart() {
+        super.onStart();
+        requestObject.requsetPermission(REQUESTCODE);
+    }
 
+    /**
+     * 将权限处理结果交给权限工具类进行处理
+     */
     @Override
     public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
-        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+
         requestObject.onResultOperation(requestCode, permissions, grantResults);
+
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
     }
 }
