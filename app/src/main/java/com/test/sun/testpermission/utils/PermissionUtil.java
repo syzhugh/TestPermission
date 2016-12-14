@@ -261,7 +261,9 @@ public class PermissionUtil {
                             public void onClick(DialogInterface dialogInterface, int i) {
                                 callback.failToGetPermission();
                             }
-                        }).show();
+                        })
+                        .setCancelable(false)
+                        .show();
             }
 
         }
@@ -361,7 +363,9 @@ public class PermissionUtil {
                             public void onClick(DialogInterface dialogInterface, int i) {
                                 callback.failToGetPermission();
                             }
-                        }).show();
+                        })
+                        .setCancelable(false)
+                        .show();
             }
 
         }
