@@ -13,6 +13,7 @@ import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
+import android.view.KeyEvent;
 
 import java.util.Collection;
 import java.util.HashMap;
@@ -173,6 +174,11 @@ public class PermissionUtil {
             * 弹出自己的提示框
             * */
             void showDialog(HashMap<String, String> map);
+
+            /*
+            * 关闭，避免重复弹出
+            * */
+            void cancelDialog();
         }
 
 
@@ -180,6 +186,7 @@ public class PermissionUtil {
             private Fragment fragment;
             private HashMap<String, String> map;
             private PermissionCallback callback;
+            private AlertDialog dialog;
 
             private String title;
             private String content;
@@ -245,25 +252,41 @@ public class PermissionUtil {
                 while (iterator.hasNext()) {
                     builder.append("\n·" + iterator.next());
                 }
-                new AlertDialog.Builder(fragment.getActivity())
-                        .setTitle(title != null ? title : "帮助")
-                        .setMessage((content != null ? content : "帮助信息") + builder.toString())
-                        .setPositiveButton("去开启", new DialogInterface.OnClickListener() {
-                            @Override
-                            public void onClick(DialogInterface dialogInterface, int i) {
-                                Intent intent = new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS);
-                                intent.setData(Uri.parse("package:" + fragment.getActivity().getPackageName()));
-                                fragment.getActivity().startActivity(intent);
-                            }
-                        })
-                        .setNegativeButton("取消", new DialogInterface.OnClickListener() {
-                            @Override
-                            public void onClick(DialogInterface dialogInterface, int i) {
-                                callback.failToGetPermission();
-                            }
-                        })
-                        .setCancelable(false)
-                        .show();
+                if (dialog == null) {
+                    dialog = new AlertDialog.Builder(fragment.getActivity())
+                            .setTitle(title != null ? title : "帮助")
+                            .setMessage((content != null ? content : "帮助信息") + builder.toString())
+                            .setPositiveButton("去开启", new DialogInterface.OnClickListener() {
+                                @Override
+                                public void onClick(DialogInterface dialogInterface, int i) {
+                                    Intent intent = new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS);
+                                    intent.setData(Uri.parse("package:" + fragment.getActivity().getPackageName()));
+                                    fragment.getActivity().startActivity(intent);
+                                }
+                            })
+                            .setNegativeButton("取消", new DialogInterface.OnClickListener() {
+                                @Override
+                                public void onClick(DialogInterface dialogInterface, int i) {
+                                    callback.failToGetPermission();
+                                }
+                            })
+                            .setOnCancelListener(new DialogInterface.OnCancelListener() {
+                                @Override
+                                public void onCancel(DialogInterface dialog) {
+                                    callback.failToGetPermission();
+                                }
+                            }).create();
+                }
+                dialog.show();
+            }
+
+            public void cancelDialog() {
+                if (dialog != null) {
+                    if (dialog.isShowing()) {
+                        dialog.dismiss();
+                        Log.i("info", "RequestObjectFragmentv4:onCancel----------------------");
+                    }
+                }
             }
 
         }
@@ -275,6 +298,7 @@ public class PermissionUtil {
 
             private String title;
             private String content;
+            private AlertDialog dialog;
 
             public RequestObjectAct(Activity activity, HashMap<String, String> map) {
                 this.activity = activity;
@@ -347,25 +371,41 @@ public class PermissionUtil {
                 while (iterator.hasNext()) {
                     builder.append("\n·" + iterator.next());
                 }
-                new AlertDialog.Builder(activity)
-                        .setTitle(title != null ? title : "帮助")
-                        .setMessage((content != null ? content : "帮助信息") + builder.toString())
-                        .setPositiveButton("去开启", new DialogInterface.OnClickListener() {
-                            @Override
-                            public void onClick(DialogInterface dialogInterface, int i) {
-                                Intent intent = new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS);
-                                intent.setData(Uri.parse("package:" + activity.getPackageName()));
-                                activity.startActivity(intent);
-                            }
-                        })
-                        .setNegativeButton("取消", new DialogInterface.OnClickListener() {
-                            @Override
-                            public void onClick(DialogInterface dialogInterface, int i) {
-                                callback.failToGetPermission();
-                            }
-                        })
-                        .setCancelable(false)
-                        .show();
+                if (dialog == null) {
+                    dialog = new AlertDialog.Builder(activity)
+                            .setTitle(title != null ? title : "帮助")
+                            .setMessage((content != null ? content : "帮助信息") + builder.toString())
+                            .setPositiveButton("去开启", new DialogInterface.OnClickListener() {
+                                @Override
+                                public void onClick(DialogInterface dialogInterface, int i) {
+                                    Intent intent = new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS);
+                                    intent.setData(Uri.parse("package:" + activity.getPackageName()));
+                                    activity.startActivity(intent);
+                                }
+                            })
+                            .setNegativeButton("取消", new DialogInterface.OnClickListener() {
+                                @Override
+                                public void onClick(DialogInterface dialogInterface, int i) {
+                                    callback.failToGetPermission();
+                                }
+                            })
+                            .setOnCancelListener(new DialogInterface.OnCancelListener() {
+                                @Override
+                                public void onCancel(DialogInterface dialog) {
+                                    callback.failToGetPermission();
+                                }
+                            }).create();
+                }
+                dialog.show();
+            }
+
+            public void cancelDialog() {
+                if (dialog != null) {
+                    if (dialog.isShowing()) {
+                        dialog.dismiss();
+                        Log.i("info", "RequestObjectFragmentv4:onCancel----------------------");
+                    }
+                }
             }
 
         }

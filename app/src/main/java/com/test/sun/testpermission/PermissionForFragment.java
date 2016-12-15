@@ -22,10 +22,4 @@ public class PermissionForFragment extends AppCompatActivity {
     }
 
 
-    @Override
-    public void onBackPressed() {
-        Log.i("info", "TestFragmentAct:onBackPressed----------------------");
-        super.onBackPressed();
-        finish();
-    }
 }

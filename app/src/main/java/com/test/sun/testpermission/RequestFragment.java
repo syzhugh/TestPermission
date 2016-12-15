@@ -77,6 +77,13 @@ public class RequestFragment extends Fragment {
 
 
     @Override
+    public void onStop() {
+        super.onStop();
+        /*处理用户的home操作(极端情况)*/
+        requestObject.cancelDialog();
+    }
+
+    @Override
     public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
         requestObject.onResultOperation(requestCode, permissions, grantResults);
