@@ -68,6 +68,17 @@ public class RequestFragment extends Fragment {
         return inflate;
     }
 
+    /*
+    * 意外问题：
+    *   dialog 会引起onpause，窗口弹出（申请操作）不能写在onresume
+    *
+    *   cancel(back)引起窗口的无处理，无反馈，setOnCancelListener
+    *
+    *   home 引起重启时，dialog依旧存在。必须写在stop中，如果写在pause中，其他窗口弹出也会触发
+    *
+    * */
+
+
     @Override
     public void onStart() {
         super.onStart();
